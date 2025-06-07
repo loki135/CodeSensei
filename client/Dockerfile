@@ -6,9 +6,10 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY .npmrc ./
 
 # Install dependencies with specific flags
-RUN npm install --legacy-peer-deps
+RUN npm install --omit=dev
 
 # Copy source code
 COPY . .
@@ -29,4 +30,8 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 # Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+CMD ["nginx", "-g", "daemon off;"]
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV VITE_API_URL=http://localhost:5000/api
