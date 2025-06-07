@@ -1,5 +1,6 @@
 # CodeSensei
 
+
 CodeSensei is an intelligent code review and analysis platform that helps developers improve their code quality through AI-powered reviews and suggestions.
 
 ## Features

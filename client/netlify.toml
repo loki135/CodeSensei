@@ -3,6 +3,7 @@
   publish = "client/dist"
   base = "."
 
+
 [dev]
   command = "npm run dev"
   port = 5173
