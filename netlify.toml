@@ -1,6 +1,6 @@
 [build]
   base = "client"
-  command = "npm install -g typescript && npm install && npm run build"
+  command = "npm install && npm run build"
   publish = "dist"
 
 [build.environment]
@@ -10,4 +10,9 @@
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200 
+  status = 200
+
+[dev]
+  command = "npm run dev"
+  port = 5173
+  targetPort = 5173 
