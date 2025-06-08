@@ -26,7 +26,12 @@ if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+sr
 
 // Middleware
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.FRONTEND_URL, 'https://codesensei.netlify.app']
+  ? [
+      process.env.FRONTEND_URL,
+      'https://codesensei.netlify.app',
+      'https://68459040e6d0885eee73db5b--codesensei135.netlify.app',
+      'https://*.netlify.app'  // Allow all Netlify preview deployments
+    ]
   : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:8080'];
 
 console.log('Environment:', process.env.NODE_ENV);
@@ -42,7 +47,17 @@ app.use(cors({
     
     console.log('Request origin:', origin);
     
-    if (allowedOrigins.indexOf(origin) === -1) {
+    // Check if origin matches any of the allowed patterns
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin.includes('*')) {
+        // Handle wildcard patterns
+        const pattern = new RegExp('^' + allowedOrigin.replace('*', '.*') + '$');
+        return pattern.test(origin);
+      }
+      return allowedOrigin === origin;
+    });
+    
+    if (!isAllowed) {
       console.log('CORS blocked request from origin:', origin);
       console.log('Allowed origins:', allowedOrigins);
       return callback(new Error('Not allowed by CORS'));
