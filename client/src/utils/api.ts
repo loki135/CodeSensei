@@ -32,6 +32,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
+  timeout: 10000, // 10 second timeout
 });
 
 // Add a request interceptor to include the auth token
@@ -41,9 +43,17 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Log the request for debugging
+    console.log('API Request:', {
+      url: config.url,
+      method: config.method,
+      baseURL: config.baseURL,
+      headers: config.headers
+    });
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -51,10 +61,41 @@ api.interceptors.request.use(
 // Add a response interceptor to handle auth errors
 api.interceptors.response.use(
   (response) => {
+    // Log successful responses for debugging
+    console.log('API Response:', {
+      status: response.status,
+      data: response.data
+    });
     return response.data;
   },
   (error: AxiosError<ApiResponse>) => {
-    if (error.response?.status === 401) {
+    // Enhanced error logging
+    console.error('API Error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        baseURL: error.config?.baseURL
+      }
+    });
+
+    if (error.code === 'ECONNABORTED') {
+      return Promise.reject({
+        message: 'Request timed out. Please try again.',
+        status: 408
+      });
+    }
+
+    if (!error.response) {
+      return Promise.reject({
+        message: 'Network error. Please check your internet connection.',
+        status: 0
+      });
+    }
+
+    if (error.response.status === 401) {
       // Clear auth data and redirect to login
       localStorage.removeItem('token');
       localStorage.removeItem('user');
