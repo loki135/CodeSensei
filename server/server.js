@@ -27,6 +27,7 @@ if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+sr
 // Middleware
 const allowedOrigins = [
   'https://codesensei135.netlify.app',
+  'https://68459040e6d0885eee73db5b--codesensei135.netlify.app',  // Preview URL
   'https://codesensei.netlify.app',
   'https://*.netlify.app',
   'http://localhost:3000',
@@ -59,6 +60,7 @@ app.use((req, res, next) => {
       console.log('CORS headers set for origin:', origin);
     } else {
       console.log('Origin not allowed:', origin);
+      console.log('Allowed origins:', allowedOrigins);
     }
   }
 
