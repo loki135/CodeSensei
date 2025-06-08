@@ -8,8 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY .npmrc ./
 
-# Install dependencies with specific flags
-RUN npm install --omit=dev
+# Install dependencies
+RUN npm install
 
 # Copy source code
 COPY . .
