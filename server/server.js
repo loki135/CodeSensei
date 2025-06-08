@@ -27,7 +27,7 @@ if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+sr
 // Middleware
 const allowedOrigins = [
   'https://codesensei135.netlify.app',
-  'https://68459040e6d0885eee73db5b--codesensei135.netlify.app',  // Preview URL
+  'https://68459040e6d0885eee73db5b--codesensei135.netlify.app',
   'https://codesensei.netlify.app',
   'https://*.netlify.app',
   'http://localhost:3000',
@@ -43,6 +43,11 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   console.log('Incoming request origin:', origin);
   
+  // Always set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
   if (origin) {
     const isAllowed = allowedOrigins.some(allowedOrigin => {
       if (allowedOrigin.includes('*')) {
@@ -54,9 +59,6 @@ app.use((req, res, next) => {
 
     if (isAllowed) {
       res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       console.log('CORS headers set for origin:', origin);
     } else {
       console.log('Origin not allowed:', origin);
@@ -79,6 +81,18 @@ app.use((req, res, next) => {
   console.log('Request headers:', req.headers);
   console.log('Response headers:', res.getHeaders());
   next();
+});
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(err.status || 500).json({
+    status: 'error',
+    message: err.message || 'Internal server error',
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.use(express.json());
@@ -176,9 +190,9 @@ app.use((req, res) => {
   });
 });
 
-// Error handling
-app.use(errorHandler);
-
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Allowed CORS origins:', allowedOrigins);
 }); 
