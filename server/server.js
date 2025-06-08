@@ -38,17 +38,18 @@ const allowedOrigins = [
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Allowed CORS origins:', allowedOrigins);
 
-// Add CORS headers middleware
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  console.log('Incoming request origin:', origin);
-  
-  // Always set CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
-  if (origin) {
+// CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    console.log('Request origin:', origin);
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      console.log('No origin - allowing request');
+      return callback(null, true);
+    }
+
+    // Check if origin is allowed
     const isAllowed = allowedOrigins.some(allowedOrigin => {
       if (allowedOrigin.includes('*')) {
         const pattern = new RegExp('^' + allowedOrigin.replace('*', '.*') + '$');
@@ -58,22 +59,21 @@ app.use((req, res, next) => {
     });
 
     if (isAllowed) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      console.log('CORS headers set for origin:', origin);
+      console.log('Origin allowed:', origin);
+      callback(null, true);
     } else {
       console.log('Origin not allowed:', origin);
-      console.log('Allowed origins:', allowedOrigins);
+      callback(new Error('Not allowed by CORS'));
     }
-  }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
+};
 
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-
-  next();
-});
+// Apply CORS middleware
+app.use(cors(corsOptions));
 
 // Add request logging middleware
 app.use((req, res, next) => {
