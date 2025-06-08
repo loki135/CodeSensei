@@ -118,7 +118,8 @@ app.get('/', (req, res) => {
     status: 'success',
     message: 'Welcome to CodeSensei API',
     documentation: '/api',
-    version: '1.0.0'
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -129,8 +130,8 @@ app.get('/api', (req, res) => {
     message: 'Welcome to CodeSensei API',
     endpoints: {
       auth: {
-        register: '/api/register',
-        login: '/api/login'
+        register: '/api/auth/register',
+        login: '/api/auth/login'
       },
       code: {
         review: '/api/review',
@@ -143,7 +144,19 @@ app.get('/api', (req, res) => {
         delete: '/api/profile',
         stats: '/api/profile/stats'
       }
-    }
+    },
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Health check route
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'API is healthy',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -151,6 +164,17 @@ app.get('/api', (req, res) => {
 app.use('/api', authRoutes);
 app.use('/api', codeRoutes);
 app.use('/api', profileRoutes);
+
+// Error handling for undefined routes
+app.use((req, res) => {
+  res.status(404).json({
+    status: 'error',
+    message: 'Route not found',
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Error handling
 app.use(errorHandler);
