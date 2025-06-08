@@ -28,17 +28,26 @@ if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+sr
 app.use(cors());
 app.use(express.json());
 
-// Database connection
-mongoose.connect(MONGODB_URI)
-  .then(() => {
+// Database connection with retry logic
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
     console.log('Connected to MongoDB Atlas');
-    console.log('Database:', mongoose.connection.name);
-    console.log('Host:', mongoose.connection.host);
-  })
-  .catch((err) => {
+    console.log('Database:', conn.connection.name);
+    console.log('Host:', conn.connection.host);
+  } catch (err) {
     console.error('MongoDB connection error:', err);
-    process.exit(1); // Exit if cannot connect to database
-  });
+    console.error('Connection URI:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//<credentials>@'));
+    process.exit(1);
+  }
+};
+
+// Connect to MongoDB
+connectDB();
 
 // Root route
 app.get('/', (req, res) => {
@@ -61,7 +70,8 @@ app.get('/api', (req, res) => {
         login: '/api/login'
       },
       code: {
-        review: '/api/review'
+        review: '/api/review',
+        history: '/api/history'
       },
       profile: {
         get: '/api/profile',
