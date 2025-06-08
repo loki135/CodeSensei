@@ -31,9 +31,14 @@ app.use(express.json());
 // Database connection with retry logic
 const connectDB = async () => {
   try {
+    console.log('Attempting to connect to MongoDB...');
+    console.log('Environment:', process.env.NODE_ENV);
+    
     const conn = await mongoose.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
+      retryWrites: true,
+      w: 'majority'
     });
     
     console.log('Connected to MongoDB Atlas');
@@ -41,7 +46,10 @@ const connectDB = async () => {
     console.log('Host:', conn.connection.host);
   } catch (err) {
     console.error('MongoDB connection error:', err);
-    console.error('Connection URI:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//<credentials>@'));
+    console.error('Connection URI format:', MONGODB_URI ? 'Present' : 'Missing');
+    console.error('Connection URI type:', typeof MONGODB_URI);
+    console.error('Connection URI length:', MONGODB_URI ? MONGODB_URI.length : 0);
+    console.error('Connection URI starts with:', MONGODB_URI ? MONGODB_URI.substring(0, 20) + '...' : 'N/A');
     process.exit(1);
   }
 };
