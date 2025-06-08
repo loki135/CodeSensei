@@ -25,10 +25,24 @@ if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+sr
 }
 
 // Middleware
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [process.env.FRONTEND_URL, 'https://codesensei.netlify.app']
+  : ['http://localhost:3000', 'http://localhost:5173'];
+
+console.log('Allowed CORS origins:', allowedOrigins);
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL, 'https://codesensei.netlify.app'] 
-    : 'http://localhost:5173',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      console.log('CORS blocked request from origin:', origin);
+      return callback(new Error('Not allowed by CORS'));
+    }
+    console.log('CORS allowed request from origin:', origin);
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -37,6 +51,7 @@ app.use(cors({
 // Add request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('Request headers:', req.headers);
   next();
 });
 

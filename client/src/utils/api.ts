@@ -27,6 +27,9 @@ interface ApiResponse<T = any> {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// Log the API base URL for debugging
+console.log('API Base URL:', API_BASE_URL);
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -48,6 +51,7 @@ api.interceptors.request.use(
       url: config.url,
       method: config.method,
       baseURL: config.baseURL,
+      fullURL: `${config.baseURL}${config.url}`,
       headers: config.headers
     });
     return config;
