@@ -25,10 +25,11 @@ interface ApiResponse<T = any> {
   details?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
 // Log the API base URL for debugging
 console.log('API Base URL:', API_BASE_URL);
+console.log('Current origin:', window.location.origin);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -52,7 +53,8 @@ api.interceptors.request.use(
       method: config.method,
       baseURL: config.baseURL,
       fullURL: `${config.baseURL}${config.url}`,
-      headers: config.headers
+      headers: config.headers,
+      origin: window.location.origin
     });
     return config;
   },
