@@ -25,58 +25,57 @@ if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+sr
 }
 
 // Middleware
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [
-      process.env.FRONTEND_URL,
-      'https://codesensei.netlify.app',
-      'https://68459040e6d0885eee73db5b--codesensei135.netlify.app',
-      'https://*.netlify.app'  // Allow all Netlify preview deployments
-    ]
-  : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:8080'];
+const allowedOrigins = [
+  'https://codesensei135.netlify.app',
+  'https://codesensei.netlify.app',
+  'https://*.netlify.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:8080'
+];
 
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Allowed CORS origins:', allowedOrigins);
 
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      console.log('Request with no origin - allowing');
-      return callback(null, true);
-    }
-    
-    console.log('Request origin:', origin);
-    
-    // Check if origin matches any of the allowed patterns
+// Add CORS headers middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  console.log('Incoming request origin:', origin);
+  
+  if (origin) {
     const isAllowed = allowedOrigins.some(allowedOrigin => {
       if (allowedOrigin.includes('*')) {
-        // Handle wildcard patterns
         const pattern = new RegExp('^' + allowedOrigin.replace('*', '.*') + '$');
         return pattern.test(origin);
       }
       return allowedOrigin === origin;
     });
-    
-    if (!isAllowed) {
-      console.log('CORS blocked request from origin:', origin);
-      console.log('Allowed origins:', allowedOrigins);
-      return callback(new Error('Not allowed by CORS'));
+
+    if (isAllowed) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      console.log('CORS headers set for origin:', origin);
+    } else {
+      console.log('Origin not allowed:', origin);
     }
-    
-    console.log('CORS allowed request from origin:', origin);
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range']
-}));
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
+  next();
+});
 
 // Add request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   console.log('Request headers:', req.headers);
-  console.log('Request origin:', req.headers.origin);
+  console.log('Response headers:', res.getHeaders());
   next();
 });
 
