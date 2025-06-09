@@ -171,7 +171,7 @@ export default function Profile() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/account`, {
+      const response = await fetch(`${API_URL}/auth/account`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
