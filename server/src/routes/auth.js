@@ -285,28 +285,55 @@ router.post('/profile/change-password', requireAuth, updateLastActive, async (re
     const userId = req.user.id;
     const { currentPassword, newPassword } = req.body;
 
-    const user = await User.findById(userId);
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Both current password and new password are required'
+      });
+    }
 
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
     }
 
-    // In a real application, you would compare currentPassword with the stored hashed password
-    // For now, we'll just assume the current password is correct (REMOVE THIS IN PRODUCTION)
-    console.warn('Password change authentication is NOT implemented. Skipping current password check.');
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Current password is incorrect'
+      });
+    }
 
-    // Hash the new password before saving (requires a hashing library like bcrypt)
-    // For now, we'll save it in plain text (REMOVE THIS IN PRODUCTION)
-    user.password = newPassword; // DANGER: Plain text password storage
+    // Update password (will be hashed by the pre-save hook)
+    user.password = newPassword;
     await user.save();
 
-    res.json({ status: 'success', message: 'Password changed successfully' });
+    // Add current session to blacklist to force re-login
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      tokenBlacklist.add(token);
+      activeSessions.delete(token);
+    }
+
+    res.json({ 
+      status: 'success', 
+      message: 'Password changed successfully. Please log in again with your new password.' 
+    });
   } catch (error) {
     console.error('Change password error:', error);
     res.status(500).json({
       status: 'error',
       message: 'Error changing password',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
