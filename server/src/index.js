@@ -78,38 +78,44 @@ const allowedOrigins = [
   'http://localhost:8080'
 ];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    console.log('Request origin:', origin);
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      console.log('No origin - allowing request');
-      return callback(null, true);
-    }
+// CORS middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  console.log('Incoming request origin:', origin);
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    // Set CORS headers for preflight
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    res.header('Access-Control-Max-Age', '86400'); // 24 hours
+    return res.status(204).end();
+  }
 
-    // Check if origin is allowed
-    const isAllowed = allowedOrigins.some(allowedOrigin => {
-      if (allowedOrigin.includes('*')) {
-        const pattern = new RegExp('^' + allowedOrigin.replace('*', '.*') + '$');
-        return pattern.test(origin);
-      }
-      return allowedOrigin === origin;
+  // For actual requests
+  if (!origin || allowedOrigins.some(allowedOrigin => {
+    if (allowedOrigin.includes('*')) {
+      const pattern = new RegExp('^' + allowedOrigin.replace('*', '.*') + '$');
+      return pattern.test(origin);
+    }
+    return allowedOrigin === origin;
+  })) {
+    // Set CORS headers for actual request
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    console.log('CORS headers set for origin:', origin);
+  } else {
+    console.log('Origin not allowed:', origin);
+    return res.status(403).json({
+      status: 'error',
+      message: 'CORS error: Origin not allowed',
+      origin: origin
     });
-
-    if (isAllowed) {
-      console.log('Origin allowed:', origin);
-      callback(null, true);
-    } else {
-      console.log('Origin not allowed:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range']
-}));
+  }
+  next();
+});
 
 // Add request logging and response time tracking middleware
 app.use((req, res, next) => {
@@ -135,9 +141,11 @@ app.use((req, res, next) => {
 
   // Track response time
   res.on('finish', () => {
-    const duration = Date.now() - start;
-    res.setHeader('x-response-time', `${duration}ms`);
-    console.log(`Response time: ${duration}ms - ${req.method} ${req.url} - ${res.statusCode}`);
+    if (!res.headersSent) {
+      const duration = Date.now() - start;
+      res.setHeader('x-response-time', `${duration}ms`);
+      console.log(`Response time: ${duration}ms - ${req.method} ${req.url} - ${res.statusCode}`);
+    }
   });
 
   next();
@@ -208,45 +216,56 @@ app.get('/api', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    timestamp: new Date().toISOString(),
-    duration: Date.now() - req._startTime
-  });
+  // Only send error response if headers haven't been sent
+  if (!res.headersSent) {
+    console.error('Error:', {
+      message: err.message,
+      stack: err.stack,
+      path: req.path,
+      method: req.method,
+      timestamp: new Date().toISOString(),
+      duration: Date.now() - req._startTime
+    });
 
-  // Handle timeout errors
-  if (err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') {
-    return res.status(408).json({
+    // Handle timeout errors
+    if (err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') {
+      return res.status(408).json({
+        status: 'error',
+        message: 'Request timeout',
+        path: req.path,
+        method: req.method
+      });
+    }
+
+    // Handle CORS errors
+    if (err.message === 'Not allowed by CORS') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'CORS error: Origin not allowed',
+        path: req.path,
+        method: req.method
+      });
+    }
+
+    // Handle other errors
+    res.status(err.status || 500).json({
       status: 'error',
-      message: 'Request timeout',
+      message: process.env.NODE_ENV === 'production' 
+        ? 'Internal server error' 
+        : err.message,
+      path: req.path,
+      method: req.method,
+      timestamp: new Date().toISOString()
+    });
+  } else {
+    // If headers were already sent, just log the error
+    console.error('Error after headers sent:', {
+      message: err.message,
+      stack: err.stack,
       path: req.path,
       method: req.method
     });
   }
-
-  // Handle CORS errors
-  if (err.message === 'Not allowed by CORS') {
-    return res.status(403).json({
-      status: 'error',
-      message: 'CORS error: Origin not allowed',
-      path: req.path,
-      method: req.method
-    });
-  }
-
-  // Handle other errors
-  res.status(err.status || 500).json({
-    status: 'error',
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
-      : err.message,
-    path: req.path,
-    method: req.method,
-    timestamp: new Date().toISOString()
-  });
 });
 
 // Connect to MongoDB and start server
