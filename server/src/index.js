@@ -117,6 +117,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 // Add request logging and response time tracking middleware
 app.use((req, res, next) => {
   const start = Date.now();
@@ -154,27 +158,11 @@ app.use((req, res, next) => {
 // Apply rate limiting
 app.use(limiter);
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/profile', accountRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV,
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-  });
-});
 
 // Root route
 app.get('/', (req, res) => {
@@ -214,7 +202,30 @@ app.get('/api', (req, res) => {
   });
 });
 
-// Error handling middleware
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
+
+// 404 handler - must be after all routes
+app.use((req, res) => {
+  console.log('404 Not Found:', req.method, req.url);
+  res.status(404).json({
+    status: 'error',
+    message: 'Route not found',
+    path: req.url,
+    method: req.method
+  });
+});
+
+// Error handling middleware - must be last
 app.use((err, req, res, next) => {
   // Only send error response if headers haven't been sent
   if (!res.headersSent) {
