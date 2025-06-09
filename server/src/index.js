@@ -67,6 +67,10 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // CORS configuration
 const allowedOrigins = [
   'https://codesensei135.netlify.app',
@@ -79,47 +83,35 @@ const allowedOrigins = [
 ];
 
 // CORS middleware
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  console.log('Incoming request origin:', origin);
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    // Set CORS headers for preflight
-    res.header('Access-Control-Allow-Origin', origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'false');
-    res.header('Access-Control-Max-Age', '86400'); // 24 hours
-    return res.status(204).end();
-  }
-
-  // For actual requests
-  if (!origin || allowedOrigins.some(allowedOrigin => {
-    if (allowedOrigin.includes('*')) {
-      const pattern = new RegExp('^' + allowedOrigin.replace('*', '.*') + '$');
-      return pattern.test(origin);
+app.use(cors({
+  origin: function(origin, callback) {
+    console.log('Incoming request origin:', origin);
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      return callback(null, true);
     }
-    return allowedOrigin === origin;
-  })) {
-    // Set CORS headers for actual request
-    res.header('Access-Control-Allow-Origin', origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'false');
-    console.log('CORS headers set for origin:', origin);
-  } else {
-    console.log('Origin not allowed:', origin);
-    return res.status(403).json({
-      status: 'error',
-      message: 'CORS error: Origin not allowed',
-      origin: origin
-    });
-  }
-  next();
-});
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+    // Check if origin is allowed
+    if (allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin.includes('*')) {
+        const pattern = new RegExp('^' + allowedOrigin.replace('*', '.*') + '$');
+        return pattern.test(origin);
+      }
+      return allowedOrigin === origin;
+    })) {
+      callback(null, true);
+    } else {
+      console.log('Origin not allowed:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400 // 24 hours
+}));
 
 // Add request logging and response time tracking middleware
 app.use((req, res, next) => {

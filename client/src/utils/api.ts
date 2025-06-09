@@ -36,8 +36,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false,
-  timeout: 30000, // Increase timeout to 30 seconds
+  withCredentials: true,
+  timeout: 30000,
 });
 
 // Add a request interceptor to include the auth token
@@ -52,9 +52,9 @@ api.interceptors.request.use(
       config.timeout = 15000; // 15 seconds for other endpoints
     }
 
-    // Add CORS headers
-    config.headers['Access-Control-Allow-Origin'] = window.location.origin;
-    config.headers['Access-Control-Allow-Credentials'] = 'false';
+    // Remove manual CORS headers - let the browser handle them
+    delete config.headers['Access-Control-Allow-Origin'];
+    delete config.headers['Access-Control-Allow-Credentials'];
 
     const token = localStorage.getItem('token');
     if (token) {
