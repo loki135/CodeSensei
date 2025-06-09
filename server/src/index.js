@@ -272,7 +272,9 @@ app.use((err, req, res, next) => {
 let server;
 connectDB()
   .then(() => {
-    server = app.listen(port, () => {
+    // Make sure we're binding to the correct port
+    const port = process.env.PORT || 5000;
+    server = app.listen(port, '0.0.0.0', () => {
       console.log(`Server is running on port ${port}`);
       console.log(`Environment: ${process.env.NODE_ENV}`);
       console.log(`Health check: http://localhost:${port}/api/health`);
@@ -294,24 +296,44 @@ connectDB()
   });
 
 // Handle process termination
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received. Shutting down gracefully...');
-  server?.close(() => {
-    console.log('Server closed');
-    mongoose.connection.close(false, () => {
-      console.log('MongoDB connection closed');
-      process.exit(0);
+  if (server) {
+    server.close(() => {
+      console.log('Server closed');
+      // Close MongoDB connection without callback
+      mongoose.connection.close()
+        .then(() => {
+          console.log('MongoDB connection closed');
+          process.exit(0);
+        })
+        .catch(err => {
+          console.error('Error closing MongoDB connection:', err);
+          process.exit(1);
+        });
     });
-  });
+  } else {
+    process.exit(0);
+  }
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('SIGINT received. Shutting down gracefully...');
-  server?.close(() => {
-    console.log('Server closed');
-    mongoose.connection.close(false, () => {
-      console.log('MongoDB connection closed');
-      process.exit(0);
+  if (server) {
+    server.close(() => {
+      console.log('Server closed');
+      // Close MongoDB connection without callback
+      mongoose.connection.close()
+        .then(() => {
+          console.log('MongoDB connection closed');
+          process.exit(0);
+        })
+        .catch(err => {
+          console.error('Error closing MongoDB connection:', err);
+          process.exit(1);
+        });
     });
-  });
+  } else {
+    process.exit(0);
+  }
 }); 
