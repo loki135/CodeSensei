@@ -37,10 +37,8 @@ export default function History() {
   const fetchReviews = async () => {
     try {
       console.log('Fetching reviews...');
-      const response: AxiosResponse<ApiResponse> = await api.get('/history');
+      const response = await api.get<ApiResponse>('/history');
       console.log('History response:', response.data);
-      console.log('Response status:', response.data.status);
-      console.log('Response data:', response.data.data);
       
       // Check if response has the expected structure
       if (!response.data || typeof response.data.status === 'undefined') {

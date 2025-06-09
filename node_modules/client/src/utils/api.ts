@@ -89,7 +89,8 @@ api.interceptors.response.use(
       headers: response.headers,
       time: response.headers['x-response-time']
     });
-    return response.data;
+    // Return the full response object instead of just the data
+    return response;
   },
   (error: AxiosError<ApiResponse>) => {
     // Enhanced error logging
