@@ -552,5 +552,53 @@ router.get('/profile/stats', requireAuth, updateLastActive, async (req, res) => 
   }
 });
 
+// Temporary endpoint to check account status
+router.post('/check-account', async (req, res) => {
+  try {
+    const { username, email } = req.body;
+    
+    if (!username && !email) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please provide either username or email'
+      });
+    }
+
+    const query = {};
+    if (username) query.username = username;
+    if (email) query.email = email;
+
+    const user = await User.findOne(query).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Account not found'
+      });
+    }
+
+    res.json({
+      status: 'success',
+      data: {
+        exists: true,
+        isDeleted: user.isDeleted,
+        deletedAt: user.deletedAt,
+        createdAt: user.createdAt,
+        username: user.username,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Check account error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error checking account status',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // Export the router
 export default router; 

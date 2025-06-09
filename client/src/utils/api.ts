@@ -166,6 +166,18 @@ export const authAPI = {
   login: async (data: { username: string; password: string }) => {
     return api.post<never, ApiResponse<AuthResponse>>('/auth/login', data);
   },
+  checkAccount: async (data: { username?: string; email?: string }) => {
+    return api.post<never, ApiResponse<{
+      exists: boolean;
+      isDeleted: boolean;
+      deletedAt?: Date;
+      createdAt: Date;
+      username: string;
+      email: string;
+      name?: string;
+      role: string;
+    }>>('/auth/check-account', data);
+  }
 };
 
 // Review API calls
