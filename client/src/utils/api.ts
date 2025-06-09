@@ -36,7 +36,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
+  withCredentials: false,
   timeout: 30000, // Increase timeout to 30 seconds
 });
 
@@ -52,10 +52,15 @@ api.interceptors.request.use(
       config.timeout = 15000; // 15 seconds for other endpoints
     }
 
+    // Add CORS headers
+    config.headers['Access-Control-Allow-Origin'] = window.location.origin;
+    config.headers['Access-Control-Allow-Credentials'] = 'false';
+
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     // Log the request for debugging
     console.log('API Request:', {
       url: config.url,
@@ -81,6 +86,7 @@ api.interceptors.response.use(
     console.log('API Response:', {
       status: response.status,
       data: response.data,
+      headers: response.headers,
       time: response.headers['x-response-time']
     });
     return response.data;
@@ -91,13 +97,24 @@ api.interceptors.response.use(
       message: error.message,
       status: error.response?.status,
       data: error.response?.data,
+      headers: error.response?.headers,
       config: {
         url: error.config?.url,
         method: error.config?.method,
         baseURL: error.config?.baseURL,
-        timeout: error.config?.timeout
+        timeout: error.config?.timeout,
+        headers: error.config?.headers
       }
     });
+
+    // Handle CORS errors specifically
+    if (error.message === 'Network Error' && !error.response) {
+      return Promise.reject({
+        message: 'CORS error: Unable to connect to the server. Please check if the server is running and accessible.',
+        status: 0,
+        isCorsError: true
+      });
+    }
 
     if (error.code === 'ECONNABORTED') {
       const endpoint = error.config?.url || '';
