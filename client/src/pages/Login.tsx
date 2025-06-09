@@ -3,10 +3,28 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../utils/api';
+import type { AxiosResponse } from 'axios';
 
 interface LoginFormData {
   username: string;
   password: string;
+}
+
+interface AuthResponse {
+  token: string;
+  user: {
+    _id: string;
+    username: string;
+    email: string;
+    name?: string;
+    role: string;
+  };
+}
+
+interface ApiResponse<T> {
+  status: 'success' | 'error';
+  data?: T;
+  message?: string;
 }
 
 const Login = () => {
@@ -31,15 +49,15 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const response = await authAPI.login(formData);
+      const response: AxiosResponse<ApiResponse<AuthResponse>> = await authAPI.login(formData);
       
-      if (response.status === 'success' && response.data) {
-        const { token, user } = response.data;
+      if (response.data?.status === 'success' && response.data?.data) {
+        const { token, user } = response.data.data;
         login(token, user);
         toast.success('Login successful!');
         navigate('/review');
       } else {
-        throw new Error(response.message || 'Login failed');
+        throw new Error(response.data?.message || 'Login failed');
       }
     } catch (error: any) {
       console.error('Login error:', error);
