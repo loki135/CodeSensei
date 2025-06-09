@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import type { AxiosResponse } from 'axios';
 
 interface Review {
   _id: string;
@@ -36,17 +37,21 @@ export default function History() {
   const fetchReviews = async () => {
     try {
       console.log('Fetching reviews...');
-      const response = await api.get<ApiResponse>('/history');
-      console.log('History response:', response);
+      const response: AxiosResponse<ApiResponse> = await api.get('/history');
+      console.log('History response:', response.data);
       
-      if (response.data?.status === 'success' && response.data.data) {
-        setReviews(response.data.data);
+      if (response.data.status === 'success') {
+        // Handle empty array as a valid response
+        setReviews(response.data.data || []);
       } else {
-        throw new Error(response.data?.message || 'Failed to fetch reviews');
+        throw new Error(response.data.message || 'Failed to fetch reviews');
       }
     } catch (error: any) {
       console.error('History fetch error:', error);
-      toast.error(error.message || 'Failed to load review history');
+      // Only show error toast if it's not an empty list
+      if (error.message !== 'Failed to fetch reviews') {
+        toast.error(error.message || 'Failed to load review history');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +84,7 @@ export default function History() {
               key={review._id}
               className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
             >
-              <div key="header" className="flex justify-between items-start mb-4">
+              <div className="flex justify-between items-start mb-4">
                 <div>
                   <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900 px-2.5 py-0.5 text-sm font-medium text-blue-800 dark:text-blue-300">
                     {review.type}
@@ -93,8 +98,8 @@ export default function History() {
                 </div>
               </div>
 
-              <div key="content" className="space-y-4">
-                <div key={`code-section-${review._id}`}>
+              <div>
+                <div className="mb-4">
                   <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                     Code
                   </h3>
@@ -103,7 +108,7 @@ export default function History() {
                   </pre>
                 </div>
 
-                <div key={`suggestions-section-${review._id}`}>
+                <div>
                   <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                     Review
                   </h3>
