@@ -39,21 +39,38 @@ export default function History() {
       console.log('Fetching reviews...');
       const response: AxiosResponse<ApiResponse> = await api.get('/history');
       console.log('History response:', response.data);
+      console.log('Response status:', response.data.status);
+      console.log('Response data:', response.data.data);
       
+      // Check if response has the expected structure
+      if (!response.data || typeof response.data.status === 'undefined') {
+        console.error('Invalid response structure:', response.data);
+        throw new Error('Invalid response from server');
+      }
+
       if (response.data.status === 'success') {
-        // Set reviews to empty array if data is undefined
-        setReviews(response.data.data || []);
-        if (!response.data.data || response.data.data.length === 0) {
+        // Ensure we have an array, even if empty
+        const reviewsData = Array.isArray(response.data.data) ? response.data.data : [];
+        console.log('Setting reviews to:', reviewsData);
+        setReviews(reviewsData);
+        
+        if (reviewsData.length === 0) {
           console.log('No reviews found');
         }
       } else {
-        // Only throw error if status is not success
+        console.error('Error status in response:', response.data);
         throw new Error(response.data.message || 'Failed to fetch reviews');
       }
     } catch (error: any) {
       console.error('History fetch error:', error);
-      // Only show error toast for actual errors, not empty lists
-      if (error.message && error.message !== 'No reviews found') {
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Only show error toast for actual errors
+      if (error.message && !error.message.includes('No reviews found')) {
         toast.error(error.message || 'Failed to load review history');
       }
     } finally {
