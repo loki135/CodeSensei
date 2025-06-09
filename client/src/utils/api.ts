@@ -37,12 +37,21 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // Increase timeout to 30 seconds
 });
 
 // Add a request interceptor to include the auth token
 api.interceptors.request.use(
   (config) => {
+    // Add timeout based on endpoint
+    if (config.url?.includes('/auth/login') || config.url?.includes('/auth/register')) {
+      config.timeout = 30000; // 30 seconds for auth endpoints
+    } else if (config.url?.includes('/review')) {
+      config.timeout = 60000; // 60 seconds for review endpoints
+    } else {
+      config.timeout = 15000; // 15 seconds for other endpoints
+    }
+
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -54,6 +63,7 @@ api.interceptors.request.use(
       baseURL: config.baseURL,
       fullURL: `${config.baseURL}${config.url}`,
       headers: config.headers,
+      timeout: config.timeout,
       origin: window.location.origin
     });
     return config;
@@ -70,7 +80,8 @@ api.interceptors.response.use(
     // Log successful responses for debugging
     console.log('API Response:', {
       status: response.status,
-      data: response.data
+      data: response.data,
+      time: response.headers['x-response-time']
     });
     return response.data;
   },
@@ -83,14 +94,25 @@ api.interceptors.response.use(
       config: {
         url: error.config?.url,
         method: error.config?.method,
-        baseURL: error.config?.baseURL
+        baseURL: error.config?.baseURL,
+        timeout: error.config?.timeout
       }
     });
 
     if (error.code === 'ECONNABORTED') {
+      const endpoint = error.config?.url || '';
+      let message = 'Request timed out. Please try again.';
+      
+      if (endpoint.includes('/auth/login') || endpoint.includes('/auth/register')) {
+        message = 'Authentication request timed out. Please check your connection and try again.';
+      } else if (endpoint.includes('/review')) {
+        message = 'Review request is taking longer than expected. Please try again.';
+      }
+      
       return Promise.reject({
-        message: 'Request timed out. Please try again.',
-        status: 408
+        message,
+        status: 408,
+        isTimeout: true
       });
     }
 

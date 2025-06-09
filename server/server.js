@@ -75,17 +75,60 @@ const corsOptions = {
 // Apply CORS middleware
 app.use(cors(corsOptions));
 
-// Add request logging middleware
+// Add request logging and response time tracking middleware
 app.use((req, res, next) => {
+  const start = Date.now();
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  console.log('Request headers:', req.headers);
-  console.log('Response headers:', res.getHeaders());
+  
+  // Set timeout for all requests
+  req.setTimeout(30000, () => {
+    console.error('Request timeout:', {
+      method: req.method,
+      url: req.url,
+      duration: Date.now() - start
+    });
+    if (!res.headersSent) {
+      res.status(408).json({
+        status: 'error',
+        message: 'Request timeout',
+        path: req.path,
+        method: req.method
+      });
+    }
+  });
+
+  // Track response time
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    res.setHeader('x-response-time', `${duration}ms`);
+    console.log(`Response time: ${duration}ms - ${req.method} ${req.url} - ${res.statusCode}`);
+  });
+
   next();
 });
 
 // Add error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('Error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+    duration: Date.now() - req._startTime
+  });
+
+  // Handle timeout errors
+  if (err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') {
+    return res.status(408).json({
+      status: 'error',
+      message: 'Request timeout',
+      path: req.path,
+      method: req.method
+    });
+  }
+
+  // Handle other errors
   res.status(err.status || 500).json({
     status: 'error',
     message: err.message || 'Internal server error',
@@ -97,15 +140,16 @@ app.use((err, req, res, next) => {
 
 app.use(express.json());
 
-// Database connection with retry logic
+// Database connection with retry logic and timeout
 const connectDB = async () => {
   try {
     console.log('Attempting to connect to MongoDB...');
     console.log('Environment:', process.env.NODE_ENV);
     
     const conn = await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000, // Increase to 10 seconds
       socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000, // Add explicit connect timeout
       retryWrites: true,
       w: 'majority'
     });
@@ -113,6 +157,17 @@ const connectDB = async () => {
     console.log('Connected to MongoDB Atlas');
     console.log('Database:', conn.connection.name);
     console.log('Host:', conn.connection.host);
+
+    // Add connection error handler
+    mongoose.connection.on('error', (err) => {
+      console.error('MongoDB connection error:', err);
+    });
+
+    // Add disconnection handler
+    mongoose.connection.on('disconnected', () => {
+      console.log('MongoDB disconnected. Attempting to reconnect...');
+    });
+
   } catch (err) {
     console.error('MongoDB connection error:', err);
     console.error('Connection URI format:', MONGODB_URI ? 'Present' : 'Missing');
