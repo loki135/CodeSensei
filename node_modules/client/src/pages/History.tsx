@@ -43,12 +43,17 @@ export default function History() {
       if (response.data.status === 'success') {
         // Handle empty array as a valid response
         setReviews(response.data.data || []);
+        // Don't show error toast for empty lists
+        if (response.data.data?.length === 0) {
+          console.log('No reviews found');
+        }
       } else {
+        // Only throw error if status is not success
         throw new Error(response.data.message || 'Failed to fetch reviews');
       }
     } catch (error: any) {
       console.error('History fetch error:', error);
-      // Only show error toast if it's not an empty list
+      // Only show error toast for actual errors, not empty lists
       if (error.message !== 'Failed to fetch reviews') {
         toast.error(error.message || 'Failed to load review history');
       }
