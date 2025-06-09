@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
 import Review from '../models/Review.js';
-import { auth } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -79,39 +79,6 @@ const validateReviewRequest = [
     .withMessage('Invalid language'),
 ];
 
-// Middleware to verify authentication
-const requireAuth = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      status: 'error',
-      message: 'Authentication required'
-    });
-  }
-
-  const token = authHeader.split(' ')[1];
-  
-  // Check if token is blacklisted
-  if (tokenBlacklist.has(token)) {
-    return res.status(401).json({
-      status: 'error',
-      message: 'Token has been invalidated'
-    });
-  }
-  
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({
-      status: 'error',
-      message: 'Invalid or expired token'
-    });
-  }
-};
-
 // GET endpoint for API information
 router.get('/', (req, res) => {
   res.json({
@@ -133,90 +100,64 @@ router.get('/', (req, res) => {
   });
 });
 
-// Submit code for review
-router.post('/', auth, validateReviewRequest, async (req, res) => {
+// POST endpoint for code review
+router.post('/', requireAuth, reviewLimiter, validateReviewRequest, async (req, res) => {
   try {
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         status: 'error',
+        message: 'Validation failed',
         errors: errors.array()
       });
     }
 
-    const { code, language, type } = req.body;
+    const { code, type, language } = req.body;
     const userId = req.user.id;
 
-    if (!process.env.COHERE_API_KEY) {
-      throw new Error('Cohere API key is not configured');
-    }
+    // Create review record
+    const review = new Review({
+      user: userId,
+      code,
+      type,
+      language,
+      status: 'pending'
+    });
 
-    console.log('Received review request:', { language, type, codeLength: code.length });
+    await review.save();
 
-    // Generate review using Cohere
-    console.log('Sending request to Cohere...');
-    try {
-      const response = await cohere.generate({
-        prompt: `Review this ${language} code for ${type} issues and provide feedback on code quality, potential bugs, and suggestions for improvement:\n\n${code}`,
-        max_tokens: 500,
-        temperature: 0.7,
-        k: 0,
-        stop_sequences: [],
-        return_likelihoods: 'NONE'
-      });
+    // Call Cohere API for code review
+    const response = await cohere.generate({
+      prompt: `Review this ${language} code for ${type}:\n\n${code}`,
+      max_tokens: 500,
+      temperature: 0.7,
+      k: 0,
+      p: 0.9,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      stop_sequences: [],
+      return_likelihoods: 'NONE'
+    });
 
-      console.log('Received response from Cohere');
+    // Update review with suggestions
+    review.review = response.generations[0].text;
+    review.status = 'completed';
+    await review.save();
 
-      // Save review to database
-      const review = new Review({
-        userId,
-        code,
-        language,
-        type,
-        review: response.generations[0].text,
-        createdAt: new Date()
-      });
-
-      await review.save();
-      console.log('Saved review to database:', review._id);
-
-      res.json({
-        status: 'success',
-        data: {
-          suggestions: response.generations[0].text,
-          reviewId: review._id
-        }
-      });
-    } catch (cohereError) {
-      console.error('Cohere API Error:', {
-        status: cohereError.statusCode,
-        message: cohereError.message,
-        details: cohereError.body
-      });
-      
-      return res.status(502).json({
-        status: 'error',
-        message: 'Error communicating with AI service',
-        details: cohereError.message
-      });
-    }
+    res.json({
+      status: 'success',
+      data: {
+        suggestions: review.review,
+        reviewId: review._id
+      }
+    });
   } catch (error) {
-    console.error('Error in review submission:', error);
-    
-    // Handle specific error types
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid request data',
-        details: error.message
-      });
-    }
-
-    res.status(500).json({ 
+    console.error('Review error:', error);
+    res.status(500).json({
       status: 'error',
-      message: 'Failed to generate review',
-      details: error.message
+      message: 'Error during code review',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

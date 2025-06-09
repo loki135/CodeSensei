@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import api from '../utils/api';
 
 interface Review {
   _id: string;
@@ -9,6 +10,12 @@ interface Review {
   type: string;
   review: string;
   createdAt: string;
+}
+
+interface ApiResponse {
+  status: 'success' | 'error';
+  data?: Review[];
+  message?: string;
 }
 
 export default function History() {
@@ -28,27 +35,18 @@ export default function History() {
 
   const fetchReviews = async () => {
     try {
-      const token = localStorage.getItem('token');
-      console.log('Fetching reviews with token:', token ? 'Token exists' : 'No token');
+      console.log('Fetching reviews...');
+      const response = await api.get<ApiResponse>('/history');
+      console.log('History response:', response);
       
-      const response = await fetch('/api/history', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      console.log('History response status:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch reviews: ${response.status}`);
+      if (response.data?.status === 'success' && response.data.data) {
+        setReviews(response.data.data);
+      } else {
+        throw new Error(response.data?.message || 'Failed to fetch reviews');
       }
-
-      const data = await response.json();
-      console.log('Received reviews:', data);
-      setReviews(data.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('History fetch error:', error);
-      toast.error('Failed to load review history');
+      toast.error(error.message || 'Failed to load review history');
     } finally {
       setIsLoading(false);
     }
