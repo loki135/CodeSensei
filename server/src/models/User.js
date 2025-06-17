@@ -85,7 +85,7 @@ userSchema.statics.findByCredentials = async function(usernameOrEmail) {
       { email: usernameOrEmail }
     ],
     isDeleted: false
-  }).maxTimeMS(5000); // 5 second timeout for database query
+  });
   return user;
 };
 
