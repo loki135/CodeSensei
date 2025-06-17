@@ -467,7 +467,7 @@ router.post('/register', async (req, res) => {
         { username },
         { email }
       ]
-    }).maxTimeMS(5000); // 5 second timeout for database query
+    });
 
     if (existingUser) {
       clearTimeout(timeout);
@@ -552,7 +552,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user by username or email (active users only)
-    const user = await User.findByCredentials(username).maxTimeMS(5000); // 5 second timeout
+    const user = await User.findByCredentials(username);
     if (!user) {
       clearTimeout(timeout);
       return res.status(401).json({
