@@ -613,19 +613,61 @@ router.post('/login', async (req, res) => {
 // GET user stats
 router.get('/profile/stats', requireAuth, updateLastActive, async (req, res) => {
   try {
-    // In a real application, fetch user stats from the database
-    // For now, return mock data
-    const mockStats = {
-      totalReviews: 42,
-      lastReviewDate: new Date().toISOString(),
-      reviewsByType: {
-        javascript: 20,
-        python: 15,
-        java: 7
+    const userId = req.user.id;
+
+    // Import Review model
+    const Review = (await import('../models/Review.js')).default;
+
+    // Get total reviews for this user
+    const totalReviews = await Review.countDocuments({ user: userId });
+
+    // Get the last review date
+    const lastReview = await Review.findOne({ user: userId })
+      .sort({ createdAt: -1 })
+      .select('createdAt');
+
+    // Get reviews by type using aggregation
+    const reviewsByType = await Review.aggregate([
+      { $match: { user: userId } },
+      {
+        $group: {
+          _id: '$type',
+          count: { $sum: 1 }
+        }
       }
+    ]);
+
+    // Convert aggregation result to object format
+    const reviewsByTypeObject = reviewsByType.reduce((acc, item) => {
+      acc[item._id] = item.count;
+      return acc;
+    }, {});
+
+    // Get reviews by language using aggregation
+    const reviewsByLanguage = await Review.aggregate([
+      { $match: { user: userId } },
+      {
+        $group: {
+          _id: '$language',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Convert aggregation result to object format
+    const reviewsByLanguageObject = reviewsByLanguage.reduce((acc, item) => {
+      acc[item._id] = item.count;
+      return acc;
+    }, {});
+
+    const stats = {
+      totalReviews,
+      lastReviewDate: lastReview?.createdAt || null,
+      reviewsByType: reviewsByTypeObject,
+      reviewsByLanguage: reviewsByLanguageObject
     };
 
-    res.json({ status: 'success', data: mockStats });
+    res.json({ status: 'success', data: stats });
   } catch (error) {
     console.error('Fetch user stats error:', error);
     res.status(500).json({
