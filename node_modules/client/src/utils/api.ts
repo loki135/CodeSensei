@@ -43,9 +43,9 @@ const api = axios.create({
 // Add a request interceptor to include the auth token
 api.interceptors.request.use(
   (config) => {
-    // Add timeout based on endpoint
+    // Add timeout based on endpoint - reduced timeouts for better UX
     if (config.url?.includes('/auth/login') || config.url?.includes('/auth/register')) {
-      config.timeout = 30000; // 30 seconds for auth endpoints
+      config.timeout = 20000; // Reduced to 20 seconds for auth endpoints
     } else if (config.url?.includes('/review')) {
       config.timeout = 60000; // 60 seconds for review endpoints
     } else {
@@ -122,7 +122,7 @@ api.interceptors.response.use(
       let message = 'Request timed out. Please try again.';
       
       if (endpoint.includes('/auth/login') || endpoint.includes('/auth/register')) {
-        message = 'Authentication request timed out. Please check your connection and try again.';
+        message = 'Authentication request timed out. The server may be experiencing high load. Please try again in a few moments.';
       } else if (endpoint.includes('/review')) {
         message = 'Review request is taking longer than expected. Please try again.';
       }
