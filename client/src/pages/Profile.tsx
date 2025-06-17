@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import api from '../utils/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -68,7 +69,7 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/profile`, {
+      const response = await api.get('/auth/profile', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -91,7 +92,7 @@ export default function Profile() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/profile/stats`, {
+      const response = await api.get('/auth/profile/stats', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -110,8 +111,7 @@ export default function Profile() {
 
   const handleProfileUpdate = async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/profile`, {
-        method: 'PATCH',
+      const response = await api.patch('/auth/profile', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
@@ -140,8 +140,7 @@ export default function Profile() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/auth/profile/change-password`, {
-        method: 'POST',
+      const response = await api.post('/auth/profile/change-password', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
@@ -174,8 +173,7 @@ export default function Profile() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/auth/account`, {
-        method: 'DELETE',
+      const response = await api.delete('/auth/account', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
