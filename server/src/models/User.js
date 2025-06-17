@@ -50,7 +50,9 @@ userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    const salt = await bcrypt.genSalt(10);
+    // Reduced salt rounds from 10 to 8 for faster processing
+    // Still secure but faster for better user experience
+    const salt = await bcrypt.genSalt(8);
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {

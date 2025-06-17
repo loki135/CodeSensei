@@ -196,14 +196,31 @@ app.get('/api', (req, res) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  const healthData = {
+    status: 'ok',
     message: 'Server is running',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV,
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-  });
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
+      external: Math.round(process.memoryUsage().external / 1024 / 1024) + ' MB'
+    },
+    version: '1.0.0',
+    cors: {
+      allowedOrigins: allowedOrigins.length,
+      currentOrigin: req.headers.origin || 'unknown'
+    }
+  };
+
+  // Set cache headers to prevent caching of health checks
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
+  res.json(healthData);
 });
 
 // 404 handler - must be after all routes
@@ -277,12 +294,19 @@ connectDB()
   .then(() => {
     // Make sure we're binding to the correct port
     const port = process.env.PORT || 5000;
+    
+    // Optimize server settings for better performance
     server = app.listen(port, '0.0.0.0', () => {
       console.log(`Server is running on port ${port}`);
       console.log(`Environment: ${process.env.NODE_ENV}`);
       console.log(`Health check: http://localhost:${port}/api/health`);
       console.log('Allowed CORS origins:', allowedOrigins);
     });
+
+    // Optimize server settings
+    server.keepAliveTimeout = 65000; // Slightly higher than ALB timeout
+    server.headersTimeout = 66000; // Slightly higher than keepAliveTimeout
+    server.maxConnections = 1000; // Allow more concurrent connections
 
     // Handle server errors
     server.on('error', (error) => {
@@ -291,6 +315,17 @@ connectDB()
         console.error(`Port ${port} is already in use`);
         process.exit(1);
       }
+    });
+
+    // Handle connection events
+    server.on('connection', (socket) => {
+      // Set socket timeout
+      socket.setTimeout(30000);
+      
+      // Handle socket errors
+      socket.on('error', (error) => {
+        console.error('Socket error:', error);
+      });
     });
   })
   .catch(err => {

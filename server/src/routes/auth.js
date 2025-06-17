@@ -438,8 +438,28 @@ router.post('/logout', checkBlacklist, (req, res) => {
 
 // Register route
 router.post('/register', async (req, res) => {
+  // Set a timeout for this specific request
+  const timeout = setTimeout(() => {
+    if (!res.headersSent) {
+      console.error('Register request timeout');
+      res.status(408).json({
+        status: 'error',
+        message: 'Registration request timed out. Please try again.'
+      });
+    }
+  }, 25000); // 25 second timeout
+
   try {
     const { username, email, password, name } = req.body;
+
+    // Validate input
+    if (!username || !email || !password) {
+      clearTimeout(timeout);
+      return res.status(400).json({
+        status: 'error',
+        message: 'Username, email, and password are required'
+      });
+    }
 
     // Check if username or email was previously used (including deleted accounts)
     const existingUser = await User.findOne({
@@ -447,9 +467,10 @@ router.post('/register', async (req, res) => {
         { username },
         { email }
       ]
-    });
+    }).maxTimeMS(5000); // 5 second timeout for database query
 
     if (existingUser) {
+      clearTimeout(timeout);
       return res.status(400).json({
         status: 'error',
         message: 'Username or email is already taken'
@@ -477,6 +498,7 @@ router.post('/register', async (req, res) => {
     const sessionInfo = createSessionInfo(token, user._id, req.ip);
     activeSessions.set(token, sessionInfo);
 
+    clearTimeout(timeout);
     res.status(201).json({
       status: 'success',
       data: {
@@ -485,7 +507,17 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
+    clearTimeout(timeout);
     console.error('Register error:', error);
+    
+    // Handle specific database errors
+    if (error.code === 11000) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Username or email is already taken'
+      });
+    }
+    
     res.status(500).json({
       status: 'error',
       message: 'Error during registration',
@@ -496,12 +528,33 @@ router.post('/register', async (req, res) => {
 
 // Login route
 router.post('/login', async (req, res) => {
+  // Set a timeout for this specific request
+  const timeout = setTimeout(() => {
+    if (!res.headersSent) {
+      console.error('Login request timeout');
+      res.status(408).json({
+        status: 'error',
+        message: 'Login request timed out. Please try again.'
+      });
+    }
+  }, 25000); // 25 second timeout
+
   try {
     const { username, password } = req.body;
 
+    // Validate input
+    if (!username || !password) {
+      clearTimeout(timeout);
+      return res.status(400).json({
+        status: 'error',
+        message: 'Username and password are required'
+      });
+    }
+
     // Find user by username or email (active users only)
-    const user = await User.findByCredentials(username);
+    const user = await User.findByCredentials(username).maxTimeMS(5000); // 5 second timeout
     if (!user) {
+      clearTimeout(timeout);
       return res.status(401).json({
         status: 'error',
         message: 'Invalid credentials'
@@ -510,6 +563,7 @@ router.post('/login', async (req, res) => {
 
     // Check if account is deleted
     if (user.isDeleted) {
+      clearTimeout(timeout);
       return res.status(401).json({
         status: 'error',
         message: 'This account has been deleted. Please create a new account.'
@@ -519,6 +573,7 @@ router.post('/login', async (req, res) => {
     // Verify password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      clearTimeout(timeout);
       return res.status(401).json({
         status: 'error',
         message: 'Invalid credentials'
@@ -536,6 +591,7 @@ router.post('/login', async (req, res) => {
     const sessionInfo = createSessionInfo(token, user._id, req.ip);
     activeSessions.set(token, sessionInfo);
 
+    clearTimeout(timeout);
     res.json({
       status: 'success',
       data: {
@@ -544,6 +600,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
+    clearTimeout(timeout);
     console.error('Login error:', error);
     res.status(500).json({
       status: 'error',
