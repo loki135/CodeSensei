@@ -21,8 +21,11 @@ interface UserProfile {
 
 interface UserStats {
   totalReviews: number;
-  lastReviewDate: string;
+  lastReviewDate: string | null;
   reviewsByType: {
+    [key: string]: number;
+  };
+  reviewsByLanguage: {
     [key: string]: number;
   };
 }
@@ -338,27 +341,69 @@ export default function Profile() {
             <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
               Review Statistics
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Reviews</h3>
-                <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
-                  {stats.totalReviews}
+            
+            {stats.totalReviews === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">
+                  No reviews yet. Start by reviewing some code!
                 </p>
               </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Review</h3>
-                <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                  {stats.lastReviewDate
-                    ? new Date(stats.lastReviewDate).toLocaleDateString()
-                    : 'No reviews yet'}
-                </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Reviews</h3>
+                  <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
+                    {stats.totalReviews}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Review</h3>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                    {stats.lastReviewDate
+                      ? new Date(stats.lastReviewDate).toLocaleDateString()
+                      : 'No reviews yet'}
+                  </p>
+                </div>
+                
+                {/* Reviews by Type */}
+                {Object.keys(stats.reviewsByType).length > 0 && (
+                  <div className="md:col-span-2">
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
+                      Reviews by Type
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(stats.reviewsByType).map(([type, count]) => (
+                        <span
+                          key={type}
+                          className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                        >
+                          {type}: {count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Reviews by Language */}
+                {Object.keys(stats.reviewsByLanguage).length > 0 && (
+                  <div className="md:col-span-2">
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
+                      Reviews by Language
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(stats.reviewsByLanguage).map(([language, count]) => (
+                        <span
+                          key={language}
+                          className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                        >
+                          {language}: {count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="md:col-span-2">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                  Reviews by Type
-                </h3>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
