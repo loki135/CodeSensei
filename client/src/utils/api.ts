@@ -192,10 +192,13 @@ export const reviewAPI = {
     try {
       const response = await api.post<never, ApiResponse<ReviewResponse>>('/review', data);
       console.log('Review API response:', response);
-      if (response.status === 'success' && response.data) {
-        return response.data;
+      
+      // Check if the response data has success status
+      if (response.data?.status === 'success' && response.data?.data) {
+        return response.data.data;
       }
-      throw new Error(response.message || 'Failed to get review');
+      
+      throw new Error(response.data?.message || 'Failed to get review');
     } catch (error) {
       console.error('Review API error:', error);
       throw error;
