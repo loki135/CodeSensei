@@ -6,7 +6,7 @@ const router = express.Router();
 // Get user profile
 router.get('/profile', auth, async (req, res, next) => {
   try {
-    res.json(req.user.getPublicProfile());
+    res.json({ status: 'success', data: req.user.getPublicProfile() });
   } catch (error) {
     next(error);
   }
