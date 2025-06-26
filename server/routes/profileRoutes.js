@@ -95,12 +95,15 @@ router.get('/profile/stats', auth, async (req, res, next) => {
       .select('createdAt');
 
     res.json({
-      totalReviews,
-      lastReviewDate: lastReview?.createdAt,
-      reviewsByType: stats.reduce((acc, stat) => {
-        acc[stat._id] = stat.count;
-        return acc;
-      }, {}),
+      status: 'success',
+      data: {
+        totalReviews,
+        lastReviewDate: lastReview?.createdAt || null,
+        reviewsByType: stats.reduce((acc, stat) => {
+          acc[stat._id] = stat.count;
+          return acc;
+        }, {}),
+      }
     });
   } catch (error) {
     next(error);
