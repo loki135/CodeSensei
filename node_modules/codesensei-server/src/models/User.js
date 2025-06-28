@@ -72,6 +72,15 @@ userSchema.methods.toJSON = function() {
   return user;
 };
 
+// Method to get public profile (without sensitive data)
+userSchema.methods.getPublicProfile = function() {
+  const user = this.toObject();
+  delete user.password;
+  delete user.isDeleted;
+  delete user.deletedAt;
+  return user;
+};
+
 // Static method to find active users only
 userSchema.statics.findActive = function() {
   return this.find({ isDeleted: false });

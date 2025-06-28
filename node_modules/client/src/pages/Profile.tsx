@@ -75,13 +75,8 @@ export default function Profile() {
         },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch profile');
-      }
-
-      const data = await response.json();
-      setProfile(data.data);
-      setEditedProfile(data.data);
+      setProfile(response.data.data);
+      setEditedProfile(response.data.data);
     } catch (error) {
       toast.error('Failed to load profile');
       console.error('Profile fetch error:', error);
@@ -98,12 +93,7 @@ export default function Profile() {
         },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch stats');
-      }
-
-      const data = await response.json();
-      setStats(data.data);
+      setStats(response.data.data);
     } catch (error) {
       console.error('Stats fetch error:', error);
     }
@@ -111,20 +101,14 @@ export default function Profile() {
 
   const handleProfileUpdate = async () => {
     try {
-      const response = await api.patch('/auth/profile', {
+      const response = await api.patch('/auth/profile', editedProfile, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editedProfile),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
-      const data = await response.json();
-      setProfile(data.data);
+      setProfile(response.data.data);
       setIsEditing(false);
       toast.success('Profile updated successfully');
     } catch (error) {
@@ -141,19 +125,14 @@ export default function Profile() {
 
     try {
       const response = await api.post('/auth/profile/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      }, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword,
-        }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to change password');
-      }
 
       toast.success('Password updated successfully');
       setPasswordData({
@@ -179,11 +158,6 @@ export default function Profile() {
           'Content-Type': 'application/json'
         },
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete account');
-      }
 
       // Clear local storage
       localStorage.removeItem('token');

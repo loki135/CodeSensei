@@ -37,7 +37,7 @@ router.patch('/profile', auth, async (req, res, next) => {
     Object.assign(req.user, filteredUpdates);
     await req.user.save();
 
-    res.json(req.user.getPublicProfile());
+    res.json({ status: 'success', data: req.user.getPublicProfile() });
   } catch (error) {
     next(error);
   }
@@ -51,14 +51,20 @@ router.post('/profile/change-password', auth, async (req, res, next) => {
     // Verify current password
     const isMatch = await req.user.comparePassword(currentPassword);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Current password is incorrect' });
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Current password is incorrect' 
+      });
     }
 
     // Update password
     req.user.password = newPassword;
     await req.user.save();
 
-    res.json({ message: 'Password updated successfully' });
+    res.json({ 
+      status: 'success', 
+      message: 'Password updated successfully' 
+    });
   } catch (error) {
     next(error);
   }
@@ -68,7 +74,10 @@ router.post('/profile/change-password', auth, async (req, res, next) => {
 router.delete('/profile', auth, async (req, res, next) => {
   try {
     await req.user.remove();
-    res.json({ message: 'Account deleted successfully' });
+    res.json({ 
+      status: 'success', 
+      message: 'Account deleted successfully' 
+    });
   } catch (error) {
     next(error);
   }
@@ -103,6 +112,7 @@ router.get('/profile/stats', auth, async (req, res, next) => {
           acc[stat._id] = stat.count;
           return acc;
         }, {}),
+        reviewsByLanguage: {} // Add empty object to match frontend expectations
       }
     });
   } catch (error) {
