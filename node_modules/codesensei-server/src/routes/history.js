@@ -1,18 +1,20 @@
 import express from 'express';
 import { requireAuth } from '../middleware/authMiddleware.js';
+import { cacheMiddleware } from '../middleware/cache.js';
 import Review from '../models/Review.js'; // Import the Review model
 
 const router = express.Router();
 
-// GET user review history
-router.get('/', requireAuth, async (req, res) => {
+// GET user review history with caching
+router.get('/', requireAuth, cacheMiddleware(300), async (req, res) => {
   try {
     console.log('Fetching history for user:', req.user.id);
     
     // Fetch review history from the database for the authenticated user
     const reviews = await Review.find({ user: req.user.id })
       .sort({ createdAt: -1 })
-      .select('-__v');
+      .select('-__v')
+      .limit(50); // Add limit for performance
 
     console.log(`Found ${reviews.length} reviews for user ${req.user.id}`);
 

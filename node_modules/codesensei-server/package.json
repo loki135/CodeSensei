@@ -7,8 +7,10 @@
     "start": "node src/index.js",
     "dev": "nodemon --env-file=./.env src/index.js",
     "generate-secret": "node scripts/generate-secret.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "test-timeout": "node test-timeout.js"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:timeout": "node test-timeout.js"
   },
   "keywords": [],
   "author": "",
@@ -25,11 +27,18 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
+    "node-cache": "^5.1.2",
     "openai": "^4.104.0"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.27.2",
+    "@types/jest": "^29.5.8",
     "axios": "^1.10.0",
-    "nodemon": "^3.0.2"
+    "babel-jest": "^30.0.2",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^6.3.3",
+    "ts-jest": "^29.1.1"
   },
   "engines": {
     "node": ">=18.0.0"

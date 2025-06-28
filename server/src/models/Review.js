@@ -41,5 +41,13 @@ const reviewSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Create indexes for better query performance
+reviewSchema.index({ user: 1 });
+reviewSchema.index({ user: 1, createdAt: -1 });
+reviewSchema.index({ user: 1, type: 1 });
+reviewSchema.index({ user: 1, language: 1 });
+reviewSchema.index({ status: 1 });
+reviewSchema.index({ createdAt: -1 });
+
 const Review = mongoose.model('Review', reviewSchema);
 export default Review; 
