@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+app.set('trust proxy', 1); // trust first proxy
+
 
 const auth = async (req, res, next) => {
   try {
