@@ -4,8 +4,6 @@ import { AuthProvider } from './context/AuthContext';
 import AppRoutes from './routes';
 import Navbar from './components/Navbar';
 import './App.css';
-app.set('trust proxy', 1); // trust first proxy
-
 
 function App() {
   return (
